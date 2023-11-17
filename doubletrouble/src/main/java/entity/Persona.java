@@ -1,5 +1,5 @@
 package entity;
 
-ona {
+class Persona {
     
 }
