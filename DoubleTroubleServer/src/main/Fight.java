@@ -1,84 +1,89 @@
 package main;
 
+import java.util.Arrays;
+import java.util.List;
+
 public class Fight {
-    ClientSocketHandler jogador1;
+    ClientSocketHandler jogador;
     ClientSocketHandler jogador2;
+    List<String> possibleActions = Arrays.asList("ATACAR","DEFENDER","FUGIR");
    
-    public Fight(ClientSocketHandler jogador1, ClientSocketHandler jogador2) {
-        this.jogador1 = jogador1;
+    public Fight(ClientSocketHandler jogador, ClientSocketHandler jogador2) {
+        this.jogador = jogador;
         this.jogador2 = jogador2;
     }
 
     public void start() {
-        jogador1.setCurrentPlayer(true);
-        jogador1.sendMessageToAll("Iniciando batalha entre os jogadores!", true);
         while(isBattleGoing()) {
-            jogador1.sendMessageToAll(printBattleStatus(), true);
-            if(jogador1.isCurrentPlayer()) {
-                if(isDead(jogador1)){
-                    jogador1.sendMessageToAll("Jogador2 venceu, parabéns!", true);
-                    jogador1.kill();
-                    jogador2.kill();
-                }
-                jogador1.sendMessageToAll("Vez do Jogador1", true);
-                while(jogador1.listenPlayer() == null) {}
-                takeBattleAction(jogador1, jogador1.listenPlayer());
-                jogador1.sendMessageToAll(printBattleStatus(), true);
-                jogador1.setCurrentPlayer(false);
-                jogador2.setCurrentPlayer(true);
-            } else {
-                if(isDead(jogador2)){
-                    jogador1.sendMessageToAll("Jogador1 venceu, parabéns!", true);
-                    jogador1.kill();
-                    jogador2.kill();
-                }
-                jogador2.sendMessageToAll("Vez do Jogador2", true);
-                while(jogador2.listenPlayer() == null) {}
-                takeBattleAction(jogador2, jogador2.listenPlayer());
-                jogador2.sendMessageToAll(printBattleStatus(), true);
-                jogador2.setCurrentPlayer(false);
-                jogador1.setCurrentPlayer(true);
-            }
-            jogador1.sendMessageToAll("CLEAR", true);
+            makePlayerTurn(jogador, jogador2);
+            makePlayerTurn(jogador2, jogador);
+        }
+        if(isDead(jogador.getPersona())){
+            sendServerMessage("Jogador1 venceu!");
+            jogador.kill();
+        }
+        if(isDead(jogador2.getPersona())){
+            sendServerMessage("Jogador1 venceu!");
+            jogador2.kill();
         }
     }
 
-    public void takeBattleAction(ClientSocketHandler player, String action) {
+    public void takeBattleAction(Persona attackingPlayerPersona, Persona deffendingPlayerPersona, String action) {
          switch(action.toUpperCase()) {
             case "ATACAR":
-                player.sendMessageToAll(player.getName() + "atacou.", true);
-                atack(player);
+                atack(attackingPlayerPersona, deffendingPlayerPersona);
                 break;
             case "DEFENDER":
-                player.sendMessageToAll(player.getName() + "defendeu. (defesa durante o próximo ataque aumentada)", true);
-                player.getPersona().defend(); 
+                attackingPlayerPersona.defend(); 
                 break;
             case "FUGIR":
-                player.sendMessageToAll(player.getName() + "Fugiu.", true);
-                player.getPersona().setHp(0);
+                attackingPlayerPersona.setHp(0);
+                break;
+            default:
                 break;
         }
     }
 
     private String printBattleStatus() {
-        return "Vida do Jogador1: " + jogador1.getPersona().getHp() 
-            + "|| Vida do jogador2: " + jogador2.getPersona().getHp();
+        return "Vida do Jogador1: " + jogador.getPersona().getHp() 
+            + " || Vida do jogador2: " + jogador2.getPersona().getHp();
     }
 
-    private void atack(ClientSocketHandler player) {
-         if(player.getName().equals("Jogador1")){
-                    player.getPersona().atack(this.jogador2.getPersona());
-        } else {
-            player.getPersona().atack(this.jogador1.getPersona());
-        }
+    private void atack(Persona attackingPlayerPersona, Persona deffendingPlayerPersona) {
+       attackingPlayerPersona.atack(deffendingPlayerPersona);
     }
 
-    private boolean isDead(ClientSocketHandler player){
-        return player.getPersona().getHp() <= 0;
+    private boolean isDead(Persona persona){
+        return persona.getHp() <= 0;
     }
 
     private boolean isBattleGoing() {
-        return this.jogador1.getPersona().getHp() > 0 && this.jogador2.getPersona().getHp() > 0; 
+        return this.jogador.getPersona().getHp() > 0 && this.jogador2.getPersona().getHp() > 0; 
+    }
+
+    private void sendServerMessage(String message) {
+        this.jogador.sendMessage(message);
+        this.jogador2.sendMessage(message);
+    }
+
+    private void makePlayerTurn(ClientSocketHandler attackingPlayer, ClientSocketHandler deffendingPlayer){
+        if(isDead(attackingPlayer.getPersona()) || isDead(deffendingPlayer.getPersona())){
+            return;
+        }
+        sendServerMessage(printBattleStatus());
+        sendServerMessage("Vez do Jogador " + attackingPlayer.getPersona().getName());
+        while(!possibleActions.contains(attackingPlayer.getInput())) {
+            try{
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        takeBattleAction(attackingPlayer.getPersona(), deffendingPlayer.getPersona(), attackingPlayer.getInput());
+        attackingPlayer.setInput("");   
+        if(deffendingPlayer.getPersona().getDefMax() > deffendingPlayer.getPersona().getDefNormal()) {
+            deffendingPlayer.getPersona().setDefMax(deffendingPlayer.getPersona().getDefNormal());
+        }
     }
     
 }
