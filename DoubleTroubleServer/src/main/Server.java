@@ -14,11 +14,15 @@ public class Server {
 	private void start(int port) throws IOException {
 		serverSocket = new ServerSocket(port);
 		while(true) {
-			Socket client = serverSocket.accept();
-			ClientSocketHandler clientSocketHandler = new ClientSocketHandler(client, clients, connectionNumber);
-			clients.add(clientSocketHandler);
-			clientSocketHandler.start();
-			connectionNumber++;
+			while (clients.size() < 2) {
+				Socket client = serverSocket.accept();
+				ClientSocketHandler clientSocketHandler = new ClientSocketHandler(client, clients, connectionNumber);
+				clients.add(clientSocketHandler);
+				clientSocketHandler.start();
+				connectionNumber++;
+			}
+			Fight fight = new Fight(clients.get(0), clients.get(1));
+			fight.start();
 		}
 	}
 	

@@ -9,15 +9,35 @@ import java.util.List;
 
 public class ClientSocketHandler extends Thread {
     private PrintStream printStream;
+    private boolean currentPlayer;
     private Socket clientSocket;
     private BufferedReader bufferedReader;
     private String clientName;
     private List<ClientSocketHandler> clients;
-
+    private String input;
+    private Persona persona = new Persona(100, 20, 10);
+    
     public ClientSocketHandler(Socket socket, List<ClientSocketHandler> clients, int socketNumber) {
         this.clientSocket = socket;
         this.clientName = "Jogador" + socketNumber;
         this.clients = clients;
+        this.currentPlayer = false;
+    }
+    
+    public String getClientName() {
+        return clientName;
+    }
+
+    public Persona getPersona() {
+        return persona;
+    }
+    
+    public boolean isCurrentPlayer() {
+        return currentPlayer;
+    }
+
+    public void setCurrentPlayer(boolean currentPlayer) {
+        this.currentPlayer = currentPlayer;
     }
 
     public void run() {
@@ -27,27 +47,39 @@ public class ClientSocketHandler extends Thread {
             String connectionConfirm = "Iniciada a conexão do " + clientName;
             System.out.println(connectionConfirm);
             sendMessageToAll(connectionConfirm, true);
-            String input;
             while((input = bufferedReader.readLine()) != null) {
-                if("EXIT".equals(input)) {
-                    System.out.println(input);
-                    sendMessageToAll("Encerrada a conexão do " + clientName, true);
-                    break;
-                }
-                System.out.println(clientName + ": " + input);
-                sendMessageToAll(input, false);
+                listenPlayer();   
             }
-            bufferedReader.close();
-            printStream.close();
-            clientSocket.close();
         } catch (IOException e) {
             e.printStackTrace();
         } 
     }
 
-    private void sendMessageToAll(String message, boolean serverMessage) {
+    public String listenPlayer(){
+        return input;
+    }
+
+    public void kill() {
+        try {
+            bufferedReader.close();
+            printStream.close();
+            clientSocket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void blockPlayer(long timeInMilliSeconds) {
+        try {
+            sleep(timeInMilliSeconds);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void sendMessageToAll(String message, boolean serverMessage) {
         for(ClientSocketHandler client : clients) {
-            client.printStream.println(serverMessage ?  "Servidor: " + message : clientName + ": " + message);
+            client.printStream.println(serverMessage ?  message : clientName + ": " + message);
         }
     }
 }
